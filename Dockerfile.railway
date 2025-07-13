@@ -9,9 +9,12 @@ ENV POSTAL_CONFIG_ROOT=/app/config
 
 RUN mkdir -p /app/config && chmod 755 /app/config
 
-# Copiar con el nombre correcto
+# Copiar script
 COPY start-postal.sh /app/start-postal.sh
 RUN chmod +x /app/start-postal.sh
+
+# Crear enlace simbólico para Railway
+RUN ln -s /app/start-postal.sh /railway-entrypoint.sh
 
 USER postal
 
