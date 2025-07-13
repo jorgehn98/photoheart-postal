@@ -5,25 +5,21 @@ echo "🚀 Iniciando Postal para Railway..."
 
 export BIND_ADDRESS=${BIND_ADDRESS:-0.0.0.0}
 export WEB_PORT=${PORT:-8080}
-export POSTAL_CONFIG_ROOT=/tmp/postal-config
+export POSTAL_CONFIG_ROOT=/config
 
 echo "📡 Binding: $BIND_ADDRESS:$WEB_PORT"
 
-echo "📁 Creando directorio de configuración..."
-mkdir -p /tmp/postal-config
-chmod 755 /tmp/postal-config
-
 echo "🔑 Generando clave de firma..."
-if [ ! -f /tmp/postal-config/signing.key ]; then
-    openssl genrsa -out /tmp/postal-config/signing.key 2048
-    chmod 600 /tmp/postal-config/signing.key
+if [ ! -f /config/signing.key ]; then
+    openssl genrsa -out /config/signing.key 2048
+    chmod 600 /config/signing.key
     echo "✅ Clave de firma generada"
 else
     echo "✅ Usando clave existente"
 fi
 
 echo "📝 Creando configuración mínima..."
-cat > /tmp/postal-config/postal.yml << EOF
+cat > /config/postal.yml << EOF
 web:
   host: ${WEB_HOSTNAME}
   protocol: ${WEB_PROTOCOL}
@@ -67,7 +63,7 @@ general:
   use_ip_pools: false
 
 signing:
-  key_path: /tmp/postal-config/signing.key
+  key_path: /config/signing.key
 EOF
 
 echo "🗄️ Inicializando base de datos..."
