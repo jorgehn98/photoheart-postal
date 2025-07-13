@@ -24,4 +24,4 @@ USER postal
 EXPOSE 8080
 
 # Comando de inicio
-ENTRYPOINT ["/app/railway-entrypoint.sh"]
+ENTRYPOINT ["/app/start-postal.sh"]
