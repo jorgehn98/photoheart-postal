@@ -1,17 +1,27 @@
 FROM ghcr.io/postalserver/postal:latest
 
-# Configurar variables de entorno por defecto
+# Cambiar a usuario root temporalmente
+USER root
+
+# Variables de entorno por defecto
 ENV RAILS_ENV=production
 ENV BIND_ADDRESS=0.0.0.0
-ENV WEB_PORT=8080
+ENV PORT=8080
+ENV POSTAL_CONFIG_ROOT=/app/config
 
-# Crear directorio de configuración
-RUN mkdir -p /config
+# Crear directorio de configuración en una ubicación permitida
+RUN mkdir -p /app/config && \
+    chmod 755 /app/config
 
-# Script de inicialización personalizado
-COPY railway-entrypoint.sh /railway-entrypoint.sh
-RUN chmod +x /railway-entrypoint.sh
+# Copiar script de inicialización
+COPY railway-entrypoint.sh /app/railway-entrypoint.sh
+RUN chmod +x /app/railway-entrypoint.sh
 
+# Volver al usuario por defecto
+USER postal
+
+# Exponer puerto
 EXPOSE 8080
 
-ENTRYPOINT ["/railway-entrypoint.sh"]
+# Comando de inicio
+ENTRYPOINT ["/app/railway-entrypoint.sh"]
