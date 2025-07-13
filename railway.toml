@@ -4,7 +4,6 @@ dockerfilePath = "Dockerfile.railway"
 
 [deploy]
 startCommand = "/app/start-postal.sh"
-healthcheckPath = "/health"
-healthcheck = "disabled"
+healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
