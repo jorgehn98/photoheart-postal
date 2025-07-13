@@ -5,9 +5,12 @@ USER root
 ENV RAILS_ENV=production
 ENV BIND_ADDRESS=0.0.0.0
 ENV PORT=8080
-ENV POSTAL_CONFIG_ROOT=/app/config
+ENV POSTAL_CONFIG_ROOT=/config
 
-RUN mkdir -p /app/config && chmod 755 /app/config
+# Crear directorio de configuración con permisos correctos
+RUN mkdir -p /config && \
+    chmod 755 /config && \
+    chown postal:postal /config
 
 # Copiar script
 COPY start-postal.sh /app/start-postal.sh
