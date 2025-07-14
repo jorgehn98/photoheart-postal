@@ -1,0 +1,39 @@
+web_server:
+  default_bind_address: 0.0.0.0
+  default_port: 5000
+
+worker:
+  default_health_server_bind_address: 0.0.0.0
+  default_health_server_port: 9090
+  threads: 2
+
+smtp_server:
+  default_bind_address: 0.0.0.0
+  default_port: 25
+
+main_db:
+  host: mysql.railway.internal
+  port: 3306
+  database: railway
+  username: root
+  password: cAXWgkkPxUBVqveLurmeoCuqORphjaCK
+
+message_db:
+  host: mysql.railway.internal
+  port: 3306
+  database: railway
+  username: root
+  password: cAXWgkkPxUBVqveLurmeoCuqORphjaCK
+
+general:
+  web_hostname: mail.photoheart.app
+  web_protocol: https
+  use_local_ns_for_domain_verification: false
+  use_resent_sender_header: true
+
+signing:
+  key_path: /config/signing.key
+
+logging:
+  enabled: true
+  level: info
