@@ -2,16 +2,6 @@ FROM ghcr.io/postalserver/postal:latest
 
 USER root
 
-ENV RAILS_ENV=production
-ENV BIND_ADDRESS=0.0.0.0
-ENV PORT=8080
-ENV POSTAL_CONFIG_ROOT=/config
-
-# Crear directorio de configuración con permisos correctos
-RUN mkdir -p /config && \
-    chmod 755 /config && \
-    chown postal:postal /config
-
 # Copiar TODOS los scripts de inicio
 COPY start-postal.sh /app/start-postal.sh
 COPY start-worker.sh /app/start-worker.sh
@@ -27,15 +17,11 @@ RUN chmod +x /app/start-postal.sh && \
     chmod +x /app/start-requeuer.sh
 
 # Crear enlaces simbólicos para compatibilidad
-RUN ln -s /app/start-postal.sh /railway-entrypoint.sh && \
-    ln -s /app/start-worker.sh /start-worker.sh && \
-    ln -s /app/start-smtp.sh /start-smtp.sh && \
-    ln -s /app/start-cron.sh /start-cron.sh && \
-    ln -s /app/start-requeuer.sh /start-requeuer.sh
+RUN ln -s /app/start-postal.sh /railway-entrypoint.sh
 
 USER postal
 
 EXPOSE 8080
 
-# Por defecto ejecuta el web server (para postal-web)
+# Por defecto ejecuta el web server
 ENTRYPOINT ["/app/start-postal.sh"]
