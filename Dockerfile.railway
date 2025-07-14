@@ -9,12 +9,13 @@ COPY start-smtp.sh /app/start-smtp.sh
 COPY start-cron.sh /app/start-cron.sh
 COPY start-requeuer.sh /app/start-requeuer.sh
 
-# Hacer ejecutables todos los scripts
+# Hacer ejecutables todos los scripts Y cambiar ownership
 RUN chmod +x /app/start-postal.sh && \
     chmod +x /app/start-worker.sh && \
     chmod +x /app/start-smtp.sh && \
     chmod +x /app/start-cron.sh && \
-    chmod +x /app/start-requeuer.sh
+    chmod +x /app/start-requeuer.sh && \
+    chown postal:postal /app/start-*.sh
 
 # Crear enlaces simbólicos para compatibilidad
 RUN ln -s /app/start-postal.sh /railway-entrypoint.sh
@@ -24,4 +25,4 @@ USER postal
 EXPOSE 8080
 
 # Por defecto ejecuta el web server
-ENTRYPOINT ["/app/start-postal.sh"]
+ENTRYPOINT ["/bin/bash", "/app/start-postal.sh"]
