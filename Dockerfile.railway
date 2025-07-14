@@ -1,119 +1,38 @@
 FROM ghcr.io/postalserver/postal:latest
 
-USER root
+# Copiar configuración oficial
+COPY docker/ci-config /config
 
-# Crear script inline para web-server
+# Variables de entorno para Railway
+ENV RAILS_ENVIRONMENT=production
+ENV POSTAL_CONFIG_ROOT=/config
+ENV BIND_ADDRESS=0.0.0.0
+ENV PORT=5000
+
+# Crear usuario admin automáticamente
 RUN echo '#!/bin/bash\n\
-set -e\n\
-echo "🚀 Iniciando Postal Web Server..."\n\
-export POSTAL_CONFIG_ROOT=/tmp/postal-config\n\
-export RAILS_ENVIRONMENT=production\n\
-mkdir -p /tmp/postal-config\n\
-chmod 755 /tmp/postal-config\n\
-if [ ! -f /tmp/postal-config/signing.key ]; then\n\
-    openssl genrsa -out /tmp/postal-config/signing.key 2048\n\
-    chmod 600 /tmp/postal-config/signing.key\n\
-fi\n\
-cat > /tmp/postal-config/postal.yml << EOF\n\
-web_server:\n\
-  default_bind_address: 0.0.0.0\n\
-  default_port: 8080\n\
-main_db:\n\
-  host: ${MAIN_DB_HOST}\n\
-  port: ${MAIN_DB_PORT:-3306}\n\
-  database: ${MAIN_DB_NAME}\n\
-  username: ${MAIN_DB_USERNAME}\n\
-  password: ${MAIN_DB_PASSWORD}\n\
-message_db:\n\
-  host: ${MESSAGE_DB_HOST}\n\
-  port: ${MESSAGE_DB_PORT:-3306}\n\
-  database: ${MESSAGE_DB_NAME}\n\
-  username: ${MESSAGE_DB_USERNAME}\n\
-  password: ${MESSAGE_DB_PASSWORD}\n\
-general:\n\
-  web_hostname: ${WEB_HOSTNAME:-mail.photoheart.app}\n\
-  web_protocol: ${WEB_PROTOCOL:-https}\n\
-signing:\n\
-  key_path: /tmp/postal-config/signing.key\n\
-EOF\n\
-postal initialize || echo "Ya inicializado"\n\
 if [ ! -z "$ADMIN_EMAIL" ]; then\n\
-    ruby -e "require \"/opt/postal/app/config/environment\"; user = User.find_by(email_address: ENV[\"ADMIN_EMAIL\"]); if user.nil?; User.create!(email_address: ENV[\"ADMIN_EMAIL\"], first_name: ENV[\"ADMIN_FNAME\"], last_name: ENV[\"ADMIN_LNAME\"], password: ENV[\"ADMIN_PASS\"], password_confirmation: ENV[\"ADMIN_PASS\"], admin: true); puts \"Usuario creado\"; else; puts \"Usuario existe\"; end"\n\
-fi\n\
-echo "🌐 Iniciando web server..."\n\
-exec postal web-server' > /start-web.sh && chmod 755 /start-web.sh
+  ruby -e "\n\
+    require \"/opt/postal/app/config/environment\"\n\
+    user = User.find_by(email_address: ENV[\"ADMIN_EMAIL\"])\n\
+    if user.nil?\n\
+      User.create!(\n\
+        email_address: ENV[\"ADMIN_EMAIL\"],\n\
+        first_name: ENV[\"ADMIN_FNAME\"] || \"Admin\",\n\
+        last_name: ENV[\"ADMIN_LNAME\"] || \"User\",\n\
+        password: ENV[\"ADMIN_PASS\"],\n\
+        password_confirmation: ENV[\"ADMIN_PASS\"],\n\
+        admin: true\n\
+      )\n\
+      puts \"✅ Usuario admin creado: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
+    else\n\
+      puts \"✅ Usuario admin ya existe: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
+    end\n\
+  "\n\
+fi' > /create-admin.sh && chmod +x /create-admin.sh
 
-# Crear script para worker  
-RUN echo '#!/bin/bash\n\
-set -e\n\
-echo "🔧 Iniciando Postal Worker..."\n\
-export POSTAL_CONFIG_ROOT=/tmp/postal-config\n\
-export RAILS_ENVIRONMENT=production\n\
-mkdir -p /tmp/postal-config\n\
-chmod 755 /tmp/postal-config\n\
-if [ ! -f /tmp/postal-config/signing.key ]; then\n\
-    openssl genrsa -out /tmp/postal-config/signing.key 2048\n\
-    chmod 600 /tmp/postal-config/signing.key\n\
-fi\n\
-cat > /tmp/postal-config/postal.yml << EOF\n\
-worker:\n\
-  default_health_server_bind_address: 0.0.0.0\n\
-  default_health_server_port: 9090\n\
-  threads: 2\n\
-main_db:\n\
-  host: ${MAIN_DB_HOST}\n\
-  port: ${MAIN_DB_PORT:-3306}\n\
-  database: ${MAIN_DB_NAME}\n\
-  username: ${MAIN_DB_USERNAME}\n\
-  password: ${MAIN_DB_PASSWORD}\n\
-message_db:\n\
-  host: ${MESSAGE_DB_HOST}\n\
-  port: ${MESSAGE_DB_PORT:-3306}\n\
-  database: ${MESSAGE_DB_NAME}\n\
-  username: ${MESSAGE_DB_USERNAME}\n\
-  password: ${MESSAGE_DB_PASSWORD}\n\
-signing:\n\
-  key_path: /tmp/postal-config/signing.key\n\
-EOF\n\
-echo "⚙️ Iniciando worker..."\n\
-exec postal worker' > /start-worker.sh && chmod 755 /start-worker.sh
+# Exponer puertos
+EXPOSE 5000 25
 
-# Crear script para SMTP
-RUN echo '#!/bin/bash\n\
-set -e\n\
-echo "📧 Iniciando Postal SMTP..."\n\
-export POSTAL_CONFIG_ROOT=/tmp/postal-config\n\
-export RAILS_ENVIRONMENT=production\n\
-mkdir -p /tmp/postal-config\n\
-chmod 755 /tmp/postal-config\n\
-if [ ! -f /tmp/postal-config/signing.key ]; then\n\
-    openssl genrsa -out /tmp/postal-config/signing.key 2048\n\
-    chmod 600 /tmp/postal-config/signing.key\n\
-fi\n\
-cat > /tmp/postal-config/postal.yml << EOF\n\
-smtp_server:\n\
-  default_bind_address: 0.0.0.0\n\
-  default_port: 25\n\
-main_db:\n\
-  host: ${MAIN_DB_HOST}\n\
-  port: ${MAIN_DB_PORT:-3306}\n\
-  database: ${MAIN_DB_NAME}\n\
-  username: ${MAIN_DB_USERNAME}\n\
-  password: ${MESSAGE_DB_PASSWORD}\n\
-message_db:\n\
-  host: ${MESSAGE_DB_HOST}\n\
-  port: ${MESSAGE_DB_PORT:-3306}\n\
-  database: ${MESSAGE_DB_NAME}\n\
-  username: ${MESSAGE_DB_USERNAME}\n\
-  password: ${MESSAGE_DB_PASSWORD}\n\
-signing:\n\
-  key_path: /tmp/postal-config/signing.key\n\
-EOF\n\
-echo "📬 Iniciando SMTP..."\n\
-exec postal smtp-server' > /start-smtp.sh && chmod 755 /start-smtp.sh
-
-USER postal
-
-EXPOSE 8080
-
-CMD ["/start-web.sh"]
+# Script de inicio que crea admin y ejecuta postal
+CMD ["/bin/bash", "-c", "/create-admin.sh && /docker-entrypoint.sh"]
