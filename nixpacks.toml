@@ -1,0 +1,16 @@
+[start]
+cmd = "/start-postal.sh"
+
+[variables]
+NODE_VERSION = "18"
+
+[phases.setup]
+nixPkgs = ["bash", "openssl"]
+
+[phases.build]
+cmd = "echo 'Build complete'"
+
+[phases.install]
+cmd = """
+chmod +x /app/start-*.sh 2>/dev/null || echo 'Scripts not found'
+"""
