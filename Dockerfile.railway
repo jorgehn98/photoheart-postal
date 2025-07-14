@@ -1,5 +1,7 @@
 FROM ghcr.io/postalserver/postal:latest
 
+USER root
+
 # Copiar configuración oficial
 COPY docker/ci-config /config
 
@@ -9,30 +11,50 @@ ENV POSTAL_CONFIG_ROOT=/config
 ENV BIND_ADDRESS=0.0.0.0
 ENV PORT=5000
 
-# Crear usuario admin automáticamente
+# Crear script completo de inicio
 RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "🚀 Iniciando Postal para PhotoHeart..."\n\
+\n\
+# Inicializar base de datos si es necesario\n\
+echo "📊 Inicializando base de datos..."\n\
+postal initialize || echo "Base de datos ya inicializada"\n\
+\n\
+# Crear usuario admin\n\
+echo "👤 Creando usuario admin..."\n\
 if [ ! -z "$ADMIN_EMAIL" ]; then\n\
   ruby -e "\n\
     require \"/opt/postal/app/config/environment\"\n\
-    user = User.find_by(email_address: ENV[\"ADMIN_EMAIL\"])\n\
-    if user.nil?\n\
-      User.create!(\n\
-        email_address: ENV[\"ADMIN_EMAIL\"],\n\
-        first_name: ENV[\"ADMIN_FNAME\"] || \"Admin\",\n\
-        last_name: ENV[\"ADMIN_LNAME\"] || \"User\",\n\
-        password: ENV[\"ADMIN_PASS\"],\n\
-        password_confirmation: ENV[\"ADMIN_PASS\"],\n\
-        admin: true\n\
-      )\n\
-      puts \"✅ Usuario admin creado: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
-    else\n\
-      puts \"✅ Usuario admin ya existe: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
+    begin\n\
+      user = User.find_by(email_address: ENV[\"ADMIN_EMAIL\"])\n\
+      if user.nil?\n\
+        User.create!(\n\
+          email_address: ENV[\"ADMIN_EMAIL\"],\n\
+          first_name: ENV[\"ADMIN_FNAME\"] || \"Admin\",\n\
+          last_name: ENV[\"ADMIN_LNAME\"] || \"User\",\n\
+          password: ENV[\"ADMIN_PASS\"],\n\
+          password_confirmation: ENV[\"ADMIN_PASS\"],\n\
+          admin: true\n\
+        )\n\
+        puts \"✅ Usuario admin creado: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
+      else\n\
+        puts \"✅ Usuario admin ya existe: #{ENV[\"ADMIN_EMAIL\"]}\"\n\
+      end\n\
+    rescue => e\n\
+      puts \"❌ Error creando admin: #{e.message}\"\n\
     end\n\
   "\n\
-fi' > /create-admin.sh && chmod +x /create-admin.sh
+fi\n\
+\n\
+# Iniciar web server en puerto 5000\n\
+echo "🌐 Iniciando Postal web server en puerto $PORT..."\n\
+exec postal web-server' > /start-postal.sh && chmod +x /start-postal.sh
 
 # Exponer puertos
 EXPOSE 5000 25
 
-# Script de inicio que crea admin y ejecuta postal
-CMD ["/bin/bash", "-c", "/create-admin.sh && /docker-entrypoint.sh"]
+# Cambiar a usuario postal
+USER postal
+
+# Usar nuestro script personalizado
+CMD ["/start-postal.sh"]
