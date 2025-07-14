@@ -1,80 +1,55 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Iniciando Postal para Railway..."
+echo "🚀 Iniciando Postal Web Server..."
 
-export BIND_ADDRESS=${BIND_ADDRESS:-0.0.0.0}
-export WEB_PORT=${PORT:-8080}
-export POSTAL_CONFIG_ROOT=/config
+export POSTAL_CONFIG_ROOT=/tmp/postal-config
+export RAILS_ENVIRONMENT=production
 
-echo "📡 Binding: $BIND_ADDRESS:$WEB_PORT"
+mkdir -p /tmp/postal-config
+chmod 755 /tmp/postal-config
 
 echo "🔑 Generando clave de firma..."
-if [ ! -f /config/signing.key ]; then
-    openssl genrsa -out /config/signing.key 2048
-    chmod 600 /config/signing.key
-    echo "✅ Clave de firma generada"
-else
-    echo "✅ Usando clave existente"
+if [ ! -f /tmp/postal-config/signing.key ]; then
+    openssl genrsa -out /tmp/postal-config/signing.key 2048
+    chmod 600 /tmp/postal-config/signing.key
 fi
 
-echo "📝 Creando configuración mínima..."
-cat > /config/postal.yml << EOF
-web:
-  host: ${WEB_HOSTNAME}
-  protocol: ${WEB_PROTOCOL}
-  max_body_size: 14680064
+echo "📝 Creando configuración v3..."
+cat > /tmp/postal-config/postal.yml << EOF
+web_server:
+  default_bind_address: 0.0.0.0
+  default_port: 8080
 
 main_db:
   host: ${MAIN_DB_HOST}
-  port: ${MAIN_DB_PORT}
+  port: ${MAIN_DB_PORT:-3306}
   database: ${MAIN_DB_NAME}
   username: ${MAIN_DB_USERNAME}
   password: ${MAIN_DB_PASSWORD}
 
 message_db:
   host: ${MESSAGE_DB_HOST}
-  port: ${MESSAGE_DB_PORT}
+  port: ${MESSAGE_DB_PORT:-3306}
   database: ${MESSAGE_DB_NAME}
   username: ${MESSAGE_DB_USERNAME}
   password: ${MESSAGE_DB_PASSWORD}
 
-rabbitmq:
-  host: ${RABBITMQ_HOST}
-  port: ${RABBITMQ_PORT}
-  username: ${RABBITMQ_USERNAME}
-  password: ${RABBITMQ_PASSWORD}
-  vhost: ${RABBITMQ_VHOST}
-
-dns:
-  mx_records:
-    - ${SMTP_HOSTNAME}
-  smtp_server_hostname: ${SMTP_HOSTNAME}
-  spf_include: spf.${WEB_HOSTNAME}
-  return_path: rp.${WEB_HOSTNAME}
-  route_domain: routes.${WEB_HOSTNAME}
-  track_domain: track.${WEB_HOSTNAME}
-
-smtp_server:
-  port: ${SMTP_PORT}
-  tls_enabled: ${SMTP_TLS_ENABLED}
-  
 general:
-  use_ip_pools: false
+  web_hostname: ${WEB_HOSTNAME:-mail.photoheart.app}
+  web_protocol: ${WEB_PROTOCOL:-https}
 
 signing:
-  key_path: /config/signing.key
+  key_path: /tmp/postal-config/signing.key
 EOF
 
-echo "🗄️ Inicializando base de datos..."
-postal initialize || echo "Base de datos ya inicializada"
+echo "🗄️ Inicializando..."
+postal initialize || echo "Ya inicializado"
 
 echo "👤 Creando usuario admin..."
 if [ ! -z "$ADMIN_EMAIL" ]; then
     cat > /tmp/create_user.rb << 'EOF'
-#!/usr/bin/env ruby
 require '/opt/postal/app/config/environment'
-
 begin
   user = User.find_by(email_address: ENV['ADMIN_EMAIL'])
   if user.nil?
@@ -86,17 +61,16 @@ begin
       password_confirmation: ENV['ADMIN_PASS'],
       admin: true
     )
-    puts "✅ Usuario admin creado: #{ENV['ADMIN_EMAIL']}"
+    puts "✅ Usuario admin creado"
   else
-    puts "✅ Usuario admin ya existe: #{ENV['ADMIN_EMAIL']}"
+    puts "✅ Usuario admin ya existe"
   end
 rescue => e
-  puts "❌ Error creando usuario: #{e.message}"
+  puts "❌ Error: #{e.message}"
 end
 EOF
-
     ruby /tmp/create_user.rb
 fi
 
-echo "🌐 Iniciando servidor web en $BIND_ADDRESS:$WEB_PORT..."
-exec postal web-server --bind="$BIND_ADDRESS" --port="$WEB_PORT"
+echo "🌐 Iniciando web server..."
+exec postal web-server
