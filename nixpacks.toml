@@ -1,5 +1,7 @@
-[providers]
-dockerfile = "Dockerfile.railway"
+providers = ["dockerfile"]
 
 [phases.build]
 cmd = "echo 'Using Docker instead of Nixpacks'"
+
+[variables]
+DOCKERFILE_PATH = "Dockerfile.railway"
